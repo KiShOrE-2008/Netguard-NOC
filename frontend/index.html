@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard NOC — Mission Control Command Center</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app-shell">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div class="brand-header">
+        <img src="logo.png" alt="NetGuard Logo" class="brand-logo-img">
+        <div>
+          <div class="brand-title">NETGUARD</div>
+          <div class="brand-subtitle">SMART NETWORKS | SAFER TOMORROW</div>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-group-label">Command</div>
+        <div class="nav-item active" onclick="switchView('overview')">
+          <span class="icon">◉</span> Overview
+        </div>
+        <div class="nav-item" onclick="switchView('topology')">
+          <span class="icon">◌</span> Topology
+        </div>
+        <div class="nav-item" onclick="switchView('devices')">
+          <span class="icon">◌</span> Devices
+        </div>
+        <div class="nav-item" onclick="switchView('incidents')">
+          <span class="icon">◌</span> Incidents
+        </div>
+
+        <div class="nav-group-label">Intelligence</div>
+        <div class="nav-item" onclick="switchView('predictions')">
+          <span class="icon">⚡</span> Predictions
+        </div>
+        <div class="nav-item" onclick="switchView('anomalies')">
+          <span class="icon">⚡</span> Anomalies
+        </div>
+        <div class="nav-item" onclick="switchView('diagnostics')">
+          <span class="icon">⚡</span> Diagnostics
+        </div>
+
+        <div class="nav-group-label">Analytics</div>
+        <div class="nav-item" onclick="switchView('analytics')">
+          <span class="icon">📊</span> Fleet Analytics
+        </div>
+        <div class="nav-item" onclick="switchView('models')">
+          <span class="icon">📊</span> Model Registry
+        </div>
+
+        <div class="nav-group-label">System</div>
+        <div class="nav-item" onclick="switchView('discovery')">
+          <span class="icon">🔍</span> Discovery
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="engine-status-list">
+          <div class="engine-status-item">
+            <span><span class="dot-status"></span>Prediction Engine</span>
+            <span class="mono-text" style="color:var(--color-low)">ONLINE</span>
+          </div>
+          <div class="engine-status-item">
+            <span><span class="dot-status"></span>Discovery Engine</span>
+            <span class="mono-text" style="color:var(--color-low)">ONLINE</span>
+          </div>
+          <div class="engine-status-item">
+            <span><span class="dot-status"></span>Database</span>
+            <span class="mono-text" style="color:var(--color-low)">ONLINE</span>
+          </div>
+        </div>
+        <div style="font-size:10px; color:var(--text-dim); margin-top:8px; text-align:right;">
+          NetGuard NOC v2.0.0
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Wrapper -->
+    <div id="main-wrapper">
+      <!-- Top Header -->
+      <header id="top-header">
+        <div class="header-left">
+          <div class="status-pill">
+            <span class="dot-status"></span> NETWORK OPERATIONAL
+          </div>
+          <span class="mono-text" style="font-size:12px; color:var(--text-dim);" id="header-time-display">--:--:-- UTC</span>
+        </div>
+
+        <div class="header-right">
+          <button class="cmd-search-btn" onclick="openCommandPalette()">
+            <span>🔍 Search fleet or commands...</span>
+            <span class="kbd-badge">⌘K</span>
+          </button>
+          <div class="mono-text" style="font-size:12px; color:var(--text-muted);">
+            OPERATOR: <strong>KISHORE K V</strong>
+          </div>
+        </div>
+      </header>
+
+      <!-- View Container -->
+      <main id="view-container">
+        <!-- View 1: Overview -->
+        <section id="view-overview" class="content-view active">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Fleet Command Center</h1>
+              <p class="page-description">Continuous real-time failure prediction & anomaly monitoring across 500 devices</p>
+            </div>
+            <button id="btn-fleet-scan" class="btn-noc primary" onclick="triggerFleetPredict()">
+              <span id="btn-fleet-scan-icon">⚡</span> <span id="btn-fleet-scan-text">Run Fleet Scan</span>
+            </button>
+          </div>
+
+          <!-- Fleet Scan Progress Banner -->
+          <div id="fleet-scan-banner" style="display:none;"></div>
+
+
+          <!-- KPI Cards -->
+          <div class="grid-4">
+            <div class="noc-card">
+              <div class="card-title">Total Devices</div>
+              <div class="kpi-value mono-text" id="kpi-total">500</div>
+              <div class="kpi-subtext">Monitored Fleet Inventory</div>
+            </div>
+            <div class="noc-card">
+              <div class="card-title">Healthy State</div>
+              <div class="kpi-value mono-text" style="color:var(--color-low)" id="kpi-healthy">472</div>
+              <div class="kpi-subtext" id="kpi-healthy-pct">94.4% operational</div>
+            </div>
+            <div class="noc-card">
+              <div class="card-title">Elevated Risk</div>
+              <div class="kpi-value mono-text" style="color:var(--color-medium)" id="kpi-at-risk">18</div>
+              <div class="kpi-subtext">Medium risk devices</div>
+            </div>
+            <div class="noc-card">
+              <div class="card-title">Critical Impending</div>
+              <div class="kpi-value mono-text" style="color:var(--color-critical)" id="kpi-critical">10</div>
+              <div class="kpi-subtext">Failure within 12 hours</div>
+            </div>
+          </div>
+
+          <!-- Network Health Bar & Stacked Risk Bar -->
+          <div class="grid-3-1">
+            <div class="noc-card">
+              <div class="card-title">Network Health Index</div>
+              <div style="display:flex; align-items:baseline; justify-content:space-between;">
+                <span class="kpi-value mono-text" id="net-health-value">87.0 <span style="font-size:16px; color:var(--text-muted)">/ 100</span></span>
+                <span class="status-pill" id="net-health-status">OPERATIONAL</span>
+              </div>
+              <div class="health-bar-container">
+                <div class="health-bar-fill" id="net-health-fill" style="width: 87%"></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim);">
+                <span>0% Critical</span>
+                <span>50% Threshold</span>
+                <span>100% Nominal</span>
+              </div>
+            </div>
+
+            <div class="noc-card">
+              <div class="card-title">Fleet Risk Breakdown</div>
+              <div class="stacked-risk-bar" id="risk-stacked-bar">
+                <div class="seg-low" style="width: 90%"></div>
+                <div class="seg-medium" style="width: 5%"></div>
+                <div class="seg-high" style="width: 3%"></div>
+                <div class="seg-critical" style="width: 2%"></div>
+              </div>
+              <div style="font-size:11px; margin-top:10px; display:flex; flex-direction:column; gap:4px;">
+                <div style="display:flex; justify-content:space-between;"><span>🟢 LOW</span><span class="mono-text" id="count-low">472</span></div>
+                <div style="display:flex; justify-content:space-between;"><span>🟡 MEDIUM</span><span class="mono-text" id="count-medium">18</span></div>
+                <div style="display:flex; justify-content:space-between;"><span>🟠 HIGH</span><span class="mono-text" id="count-high">7</span></div>
+                <div style="display:flex; justify-content:space-between;"><span>🔴 CRITICAL</span><span class="mono-text" id="count-critical">3</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top Predicted Failures Table -->
+          <div class="noc-card">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+              <div class="card-title" style="margin:0;">Top Impending Device Failures (Next 12 Hours)</div>
+              <button class="btn-noc" onclick="switchView('predictions')">View All Predictions →</button>
+            </div>
+            <div class="noc-table-wrapper">
+              <table class="noc-table">
+                <thead>
+                  <tr>
+                    <th>Device ID</th>
+                    <th>Hostname</th>
+                    <th>IP Address</th>
+                    <th>Risk Level</th>
+                    <th>12h Failure Prob</th>
+                    <th>Diagnosis</th>
+                    <th>Health Score</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="top-failures-tbody">
+                  <!-- Rendered via app.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 2: Topology -->
+        <section id="view-topology" class="content-view">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Network Topology Map</h1>
+              <p class="page-description">Real-time dynamic device node hierarchy & uplink status visualization</p>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button class="btn-noc" onclick="loadTopologyData()">🔄 Refresh Topology</button>
+            </div>
+          </div>
+
+          <div class="noc-card">
+            <div id="topology-svg-container">
+              <svg id="topology-svg"></svg>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 3: Devices -->
+        <section id="view-devices" class="content-view">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Fleet Device Inventory</h1>
+              <p class="page-description">Search and inspect all 500 managed network device endpoints</p>
+            </div>
+            <input type="text" id="device-search-input" class="cmd-input" style="width:300px; padding:8px 12px; font-size:13px; border-radius:6px;" placeholder="Search hostname, IP, vendor..." onkeyup="filterDevicesTable()">
+          </div>
+
+          <div class="noc-card">
+            <div class="noc-table-wrapper">
+              <table class="noc-table">
+                <thead>
+                  <tr>
+                    <th>Device ID</th>
+                    <th>Hostname</th>
+                    <th>IP Address</th>
+                    <th>Type</th>
+                    <th>Vendor</th>
+                    <th>Location</th>
+                    <th>Risk Status</th>
+                    <th>Failure Risk</th>
+                    <th>Health</th>
+                  </tr>
+                </thead>
+                <tbody id="devices-list-tbody">
+                  <!-- Rendered via app.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 4: Incidents -->
+        <section id="view-incidents" class="content-view">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Active Incident Management</h1>
+              <p class="page-description">Deduplicated active alerts and NOC operational incident lifecycle</p>
+            </div>
+          </div>
+
+          <div class="noc-card">
+            <div class="noc-table-wrapper">
+              <table class="noc-table">
+                <thead>
+                  <tr>
+                    <th>Incident ID</th>
+                    <th>Timestamp</th>
+                    <th>Device ID</th>
+                    <th>Severity</th>
+                    <th>Title & Message</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="incidents-tbody">
+                  <!-- Rendered via app.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 5: Predictions -->
+        <section id="view-predictions" class="content-view">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Failure Predictions Forecast</h1>
+              <p class="page-description">Machine learning predictive risk model outputs for next 12 hours</p>
+            </div>
+          </div>
+          <div class="noc-card">
+            <div class="noc-table-wrapper">
+              <table class="noc-table">
+                <thead>
+                  <tr>
+                    <th>Device ID</th>
+                    <th>Hostname</th>
+                    <th>Risk</th>
+                    <th>Probability</th>
+                    <th>Diagnosis</th>
+                    <th>Confidence</th>
+                  </tr>
+                </thead>
+                <tbody id="predictions-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 6: Anomalies -->
+        <section id="view-anomalies" class="content-view">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Isolation Forest Anomaly Detection</h1>
+              <p class="page-description">Unsupervised telemetry anomaly index vs failure risk</p>
+            </div>
+          </div>
+          <div class="noc-card">
+            <div class="noc-table-wrapper">
+              <table class="noc-table">
+                <thead>
+                  <tr>
+                    <th>Device ID</th>
+                    <th>Hostname</th>
+                    <th>Anomaly Index</th>
+                    <th>Failure Risk</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="anomalies-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 6b: Diagnostics & What-If Simulator -->
+        <section id="view-diagnostics" class="content-view">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Device Diagnostics & What-If Simulator</h1>
+              <p class="page-description">Real-time telemetry inference, root-cause diagnosis, anomaly scoring, and counterfactual simulation</p>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button id="whatif-toggle-btn" class="btn-noc" onclick="toggleWhatIfMode()">
+                <span class="icon">🧪</span> What-If Simulator
+              </button>
+              <button id="btn-run-diag" class="btn-noc primary" onclick="runDiagnosticsInference()">
+                <span>⚡ Run Live Diagnostics</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- What-If Live Delta Panel (hidden by default) -->
+          <div id="whatif-panel" class="noc-card" style="display:none; margin-bottom:20px; border-left:4px solid var(--accent-cyan); background:rgba(56, 189, 248, 0.05);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <div style="font-weight:700; color:var(--accent-cyan); display:flex; align-items:center; gap:8px;">
+                <span>🧪 WHAT-IF COUNTERFACTUAL SIMULATION ACTIVE</span>
+              </div>
+              <span class="mono-text" style="font-size:11px; color:var(--text-muted);">Adjust any slider below for real-time risk recomputation</span>
+            </div>
+            <div class="grid-4" style="margin-bottom:0;">
+              <div style="background:var(--bg-dark); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">SIMULATED PROBABILITY</div>
+                <div style="display:flex; align-items:baseline; gap:8px;">
+                  <span id="wi-prob-val" class="mono-text" style="font-size:22px; font-weight:700; color:var(--color-critical);">--%</span>
+                  <span id="wi-delta-prob" class="mono-text" style="font-size:12px; font-weight:600;">--</span>
+                </div>
+              </div>
+              <div style="background:var(--bg-dark); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">SIMULATED HEALTH SCORE</div>
+                <div style="display:flex; align-items:baseline; gap:8px;">
+                  <span id="wi-health-val" class="mono-text" style="font-size:22px; font-weight:700; color:var(--color-medium);">--</span>
+                  <span id="wi-delta-health" class="mono-text" style="font-size:12px; font-weight:600;">--</span>
+                </div>
+              </div>
+              <div style="background:var(--bg-dark); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">SIMULATED RISK CATEGORY</div>
+                <span id="wi-risk-val" class="mono-text" style="font-size:18px; font-weight:700; color:var(--text-main);">--</span>
+              </div>
+              <div style="background:var(--bg-dark); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+                <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">ESTIMATED TIME TO FAILURE</div>
+                <span id="wi-window-val" class="mono-text" style="font-size:15px; font-weight:600; color:var(--accent-cyan);">--</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <!-- Left: Telemetry Sliders and Controls -->
+            <div class="noc-card">
+              <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Device Telemetry Inputs</span>
+                <div style="display:flex; gap:12px; align-items:center; font-size:12px; font-weight:normal;">
+                  <label><input type="radio" name="Device_Type" value="Router" checked onchange="onSliderChange()"> Router</label>
+                  <label><input type="radio" name="Device_Type" value="Switch" onchange="onSliderChange()"> Switch</label>
+                </div>
+              </div>
+
+              <div style="display:flex; flex-direction:column; gap:14px; margin-top:10px;">
+                <!-- CPU -->
+                <div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <label style="font-size:12px; color:var(--text-muted);">CPU Utilization</label>
+                    <span id="val-cpu" class="mono-text" style="font-size:12px; color:var(--accent-cyan);">92%</span>
+                  </div>
+                  <input type="range" id="cpu_usage" min="0" max="100" value="92" style="width:100%; accent-color:var(--accent-cyan);" oninput="updateSliderVal('cpu', this.value, '%')">
+                </div>
+
+                <!-- Memory -->
+                <div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <label style="font-size:12px; color:var(--text-muted);">Memory Utilization</label>
+                    <span id="val-memory" class="mono-text" style="font-size:12px; color:var(--accent-cyan);">94%</span>
+                  </div>
+                  <input type="range" id="memory_usage" min="0" max="100" value="94" style="width:100%; accent-color:var(--accent-cyan);" oninput="updateSliderVal('memory', this.value, '%')">
+                </div>
+
+                <!-- Temperature -->
+                <div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <label style="font-size:12px; color:var(--text-muted);">Temperature (°C)</label>
+                    <span id="val-temperature" class="mono-text" style="font-size:12px; color:var(--accent-cyan);">78°C</span>
+                  </div>
+                  <input type="range" id="temperature" min="20" max="130" value="78" style="width:100%; accent-color:var(--accent-cyan);" oninput="updateSliderVal('temperature', this.value, '°C')">
+                </div>
+
+                <!-- Interface Errors -->
+                <div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <label style="font-size:12px; color:var(--text-muted);">Interface Errors</label>
+                    <span id="val-errors" class="mono-text" style="font-size:12px; color:var(--accent-cyan);">156</span>
+                  </div>
+                  <input type="range" id="interface_errors" min="0" max="500" value="156" style="width:100%; accent-color:var(--accent-cyan);" oninput="updateSliderVal('errors', this.value, '')">
+                </div>
+
+                <!-- Packet Loss -->
+                <div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <label style="font-size:12px; color:var(--text-muted);">Packet Loss (%)</label>
+                    <span id="val-loss" class="mono-text" style="font-size:12px; color:var(--accent-cyan);">8.2%</span>
+                  </div>
+                  <input type="range" id="packet_loss" min="0" max="50" step="0.1" value="8.2" style="width:100%; accent-color:var(--accent-cyan);" oninput="updateSliderVal('loss', this.value, '%')">
+                </div>
+
+                <!-- Bandwidth Usage -->
+                <div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <label style="font-size:12px; color:var(--text-muted);">Bandwidth Usage (%)</label>
+                    <span id="val-bandwidth" class="mono-text" style="font-size:12px; color:var(--accent-cyan);">95%</span>
+                  </div>
+                  <input type="range" id="bandwidth_usage" min="0" max="100" value="95" style="width:100%; accent-color:var(--accent-cyan);" oninput="updateSliderVal('bandwidth', this.value, '%')">
+                </div>
+
+                <!-- Uptime & Log Errors -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                  <div>
+                    <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:4px;">UPTIME (DAYS)</label>
+                    <input type="number" id="uptime" class="cmd-input" value="20" min="0" style="width:100%; padding:8px 10px; font-size:13px; border-radius:6px;" oninput="onSliderChange()">
+                  </div>
+                  <div>
+                    <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:4px;">LOG ERRORS COUNT</label>
+                    <input type="number" id="log_errors" class="cmd-input" value="20" min="0" style="width:100%; padding:8px 10px; font-size:13px; border-radius:6px;" oninput="onSliderChange()">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Health Gauge & Diagnostics -->
+            <div style="display:flex; flex-direction:column; gap:16px;">
+              <!-- Health Gauge Card -->
+              <div class="noc-card">
+                <div class="card-title">Device Health Index & Risk Assessment</div>
+                <div style="display:flex; align-items:center; justify-content:space-around; padding:10px 0;">
+                  <!-- Circular SVG Health Score Arc -->
+                  <div style="position:relative; width:120px; height:120px; display:flex; align-items:center; justify-content:center;">
+                    <svg width="120" height="120" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="var(--border-color)" stroke-width="8"/>
+                      <circle id="health-score-arc" cx="50" cy="50" r="45" fill="none" stroke="#22c55e" stroke-width="8"
+                              stroke-dasharray="282.7" stroke-dashoffset="56.5" stroke-linecap="round"
+                              transform="rotate(-90 50 50)" style="transition: stroke-dashoffset 0.6s ease, stroke 0.6s ease;"/>
+                    </svg>
+                    <div style="position:absolute; text-align:center;">
+                      <div id="health-score-value" class="mono-text" style="font-size:24px; font-weight:700; color:var(--color-low);">--</div>
+                      <div id="health-score-label" style="font-size:9px; font-weight:700; letter-spacing:0.5px; color:var(--color-low);">HEALTHY</div>
+                    </div>
+                  </div>
+
+                  <!-- Details -->
+                  <div style="display:flex; flex-direction:column; gap:8px;">
+                    <div>
+                      <span style="font-size:11px; color:var(--text-muted);">DIAGNOSED FAILURE MODE:</span>
+                      <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
+                        <span id="failure-type-display" class="mono-text" style="font-size:16px; font-weight:700; color:var(--accent-cyan);">--</span>
+                      </div>
+                    </div>
+                    <div>
+                      <span style="font-size:11px; color:var(--text-muted);">ANOMALY INDEX:</span>
+                      <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
+                        <span id="anomaly-score-val" class="mono-text" style="font-size:14px; font-weight:700;">--%</span>
+                        <span id="anomaly-flag-badge" class="badge" style="font-size:10px; padding:2px 8px; border-radius:12px; font-weight:600;">--</span>
+                      </div>
+                    </div>
+                    <div>
+                      <span style="font-size:11px; color:var(--text-muted);">ESTIMATED WINDOW:</span>
+                      <div id="risk-window-text" class="mono-text" style="font-size:13px; color:var(--text-main); font-weight:600;">--</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="border-top:1px solid var(--border-color); padding-top:10px; margin-top:8px;">
+                  <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px;">DIAGNOSTIC NARRATIVE</div>
+                  <p id="failure-desc-display" style="font-size:12px; color:var(--text-main); line-height:1.4;">--</p>
+                </div>
+              </div>
+
+              <!-- Primary Risk Drivers (SHAP Attribution) -->
+              <div class="noc-card">
+                <div class="card-title">Primary Risk Drivers (SHAP Feature Attribution)</div>
+                <div id="shap-bars-container" style="display:flex; flex-direction:column; gap:8px; padding-top:4px;">
+                  <p class="mono-text" style="font-size:12px; color:var(--text-muted);">Click "Run Live Diagnostics" to compute SHAP attributions.</p>
+                </div>
+              </div>
+
+              <!-- Recommended Maintenance Actions -->
+              <div class="noc-card">
+                <div class="card-title">Actionable Runbook Recommendations</div>
+                <ul id="intel-actions-list" style="padding-left:18px; margin-top:6px; display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--text-muted);">
+                  <li>No active recommendations.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 7: Analytics -->
+        <section id="view-analytics" class="content-view">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Fleet Intelligence Analytics</h1>
+              <p class="page-description">Failure mode distributions, vendor health, and location statistics</p>
+            </div>
+          </div>
+
+          <!-- KPI Summary Row -->
+          <div class="grid-4" style="margin-bottom:20px;">
+            <div class="noc-card" style="text-align:center;">
+              <div class="card-title">Total Devices</div>
+              <div class="kpi-value" id="analytics-kpi-total" style="color:var(--accent-cyan);">—</div>
+            </div>
+            <div class="noc-card" style="text-align:center;">
+              <div class="card-title">Avg Health Score</div>
+              <div class="kpi-value" id="analytics-kpi-health" style="color:#22c55e;">—</div>
+            </div>
+            <div class="noc-card" style="text-align:center;">
+              <div class="card-title">Failure Modes Active</div>
+              <div class="kpi-value" id="analytics-kpi-modes" style="color:#f97316;">—</div>
+            </div>
+            <div class="noc-card" style="text-align:center;">
+              <div class="card-title">Avg Failure Probability</div>
+              <div class="kpi-value" id="analytics-kpi-prob" style="color:#eab308;">—</div>
+            </div>
+          </div>
+
+          <!-- Failure Mode + Device Type -->
+          <div class="grid-2">
+            <div class="noc-card">
+              <div class="card-title">Failure Mode Distribution</div>
+              <div id="analytics-failure-types" style="padding:4px 0;"></div>
+            </div>
+            <div class="noc-card">
+              <div class="card-title">Device Type Distribution</div>
+              <div id="analytics-device-types" style="padding:4px 0;"></div>
+            </div>
+          </div>
+
+          <!-- Vendor + Location -->
+          <div class="grid-2">
+            <div class="noc-card">
+              <div class="card-title">Vendor Fleet Health</div>
+              <div id="analytics-vendor-health" style="padding:4px 0;"></div>
+            </div>
+            <div class="noc-card">
+              <div class="card-title">Location Overview</div>
+              <div id="analytics-location-overview" style="padding:4px 0;"></div>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- View 8: Discovery -->
+        <section id="view-discovery" class="content-view">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Network Subnet Discovery Scanner</h1>
+              <p class="page-description">Scan CIDR blocks and discover network endpoints</p>
+            </div>
+          </div>
+          <div class="noc-card" style="margin-bottom:20px;">
+            <div style="display:flex; gap:16px; align-items:flex-end;">
+              <div>
+                <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:4px;">TARGET CIDR SUBNET</label>
+                <input type="text" id="discovery-cidr-input" class="cmd-input" style="width:220px; padding:8px 12px; font-size:13px; border-radius:6px;" value="10.1.0.0/24">
+              </div>
+              <div>
+                <label style="font-size:11px; color:var(--text-muted); display:block; margin-bottom:4px;">DISCOVERY MODE</label>
+                <select id="discovery-mode-select" class="btn-noc" style="padding:8px 12px;">
+                  <option value="SIMULATION">SIMULATION (Dataset Inventory)</option>
+                  <option value="LAB">LAB (ICMP/TCP Socket Probe)</option>
+                  <option value="PRODUCTION">PRODUCTION (SNMP v2c/v3 & REST API)</option>
+                </select>
+              </div>
+              <button id="btn-discovery-scan" class="btn-noc primary" style="padding:8px 16px;" onclick="runDiscoveryScan()">🔍 Start Discovery Scan</button>
+            </div>
+          </div>
+          <div class="noc-card">
+            <div class="card-title">Discovered Endpoints</div>
+            <div class="noc-table-wrapper">
+              <table class="noc-table">
+                <thead>
+                  <tr>
+                    <th>Device ID</th>
+                    <th>Hostname</th>
+                    <th>IP Address</th>
+                    <th>Type</th>
+                    <th>Vendor</th>
+                    <th>Model</th>
+                    <th>Protocol</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="discovery-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- View 9: Models -->
+        <section id="view-models" class="content-view">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">Machine Learning Model Registry</h1>
+              <p class="page-description">Trained failure prediction models, validation reports, and feature schema</p>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="noc-card">
+              <div class="card-title">Supervised Failure Classifier</div>
+              <p style="font-size:13px; margin-bottom:8px;">Selected Algorithm: <strong style="color:var(--accent-cyan)">RandomForestClassifier</strong></p>
+              <p style="font-size:12px; color:var(--text-muted);">Target: <span class="mono-text">Failure_Next_12h</span></p>
+              <p style="font-size:12px; color:var(--text-muted);">Validation Strategy: <span class="mono-text">GroupShuffleSplit by Device_ID</span></p>
+            </div>
+            <div class="noc-card">
+              <div class="card-title">Validation Reports</div>
+              <p style="font-size:13px; margin-bottom:12px;">Automated evaluation report outputs generated after training:</p>
+              <div style="display:flex; gap:10px;">
+                <a href="/outputs/reports/model_report.json" target="_blank" class="btn-noc">📄 View JSON Report</a>
+                <a href="/outputs/reports/model_report.html" target="_blank" class="btn-noc primary">📊 View HTML Report</a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Slide-out Device Deep-Dive Drawer -->
+  <div id="device-drawer">
+    <div class="drawer-header">
+      <div>
+        <h2 id="drawer-device-id" class="mono-text" style="font-size:18px; color:var(--accent-cyan)">DEV-0001</h2>
+        <p id="drawer-hostname" style="font-size:12px; color:var(--text-muted)">core-router-0001</p>
+      </div>
+      <button class="drawer-close-btn" onclick="closeDeviceDrawer()">✕</button>
+    </div>
+    <div class="drawer-content" id="drawer-body">
+      <!-- Dynamic Drawer Content -->
+    </div>
+  </div>
+
+  <!-- Command Palette Modal -->
+  <div id="cmd-modal-overlay">
+    <div class="cmd-modal-box">
+      <input type="text" id="cmd-input" class="cmd-input" placeholder="Type a view or search device (e.g. Overview, Topology, DEV-0042)..." onkeyup="handleCmdSearch()">
+      <div class="cmd-results" id="cmd-results">
+        <div class="cmd-item" onclick="switchView('overview'); closeCommandPalette();"><span>◉ Overview Dashboard</span><span class="kbd-badge">View</span></div>
+        <div class="cmd-item" onclick="switchView('topology'); closeCommandPalette();"><span>○ Network Topology Map</span><span class="kbd-badge">View</span></div>
+        <div class="cmd-item" onclick="switchView('devices'); closeCommandPalette();"><span>📋 Fleet Device Inventory</span><span class="kbd-badge">View</span></div>
+        <div class="cmd-item" onclick="switchView('incidents'); closeCommandPalette();"><span>🚨 Active Incident Alerts</span><span class="kbd-badge">View</span></div>
+        <div class="cmd-item" onclick="switchView('discovery'); closeCommandPalette();"><span>🔍 Subnet Discovery Scanner</span><span class="kbd-badge">System</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

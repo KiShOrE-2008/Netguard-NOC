@@ -1,0 +1,10 @@
+
+pandas
+numpy
+matplotlib
+seaborn
+joblib
+scikit-learn
+xgboost
+flask
+shap==0.52.0
