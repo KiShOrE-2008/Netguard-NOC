@@ -29,7 +29,7 @@ class NetworkDiscoveryEngine:
         """
         Discovers network devices in the specified CIDR block according to operational mode.
         """
-        mode_upper = mode.upper()
+        mode_upper = str(mode).upper()
         print(f"[DiscoveryEngine] Starting scan on {cidr} (Mode: {mode_upper})...")
 
         # Validate CIDR input to prevent arbitrary scanning or injection
@@ -106,7 +106,7 @@ class NetworkDiscoveryEngine:
 
             if is_open:
                 dev = {
-                    "device_id": f"DEV-LAB-{ip_str.replace('.', '')[-4:]}",
+                    "device_id": f"DEV-LAB-{ip_str.replace('.', '-').replace(':', '-')}",
                     "hostname": f"lab-node-{ip_str.replace('.', '-')}",
                     "ip_address": ip_str,
                     "device_type": "GENERIC_HOST",

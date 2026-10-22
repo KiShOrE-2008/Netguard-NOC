@@ -131,7 +131,7 @@ def main():
     health_score = health_engine.compute_health_score(telemetry, probability=probability, anomaly_score=anom_res.get('anomaly_score', 0.0))
     shap_causes = shap_explainer.get_shap_causes(telemetry, top_n=5)
 
-    risk = "HIGH" if probability >= 0.65 else "MEDIUM" if probability >= 0.30 else "LOW"
+    risk = health_engine.get_risk_level(probability)
 
     print("\n" + "=" * 60)
     print("NETGUARD NOC DIAGNOSTIC REPORT")

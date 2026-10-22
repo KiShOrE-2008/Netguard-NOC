@@ -40,13 +40,13 @@ def generate_network_telemetry(num_devices=500, steps_per_device=100):
     Generates telemetry where failure is driven by a latent component health state (h_t),
     decoupling telemetry measurements from direct threshold formula calculation.
     """
-    os.makedirs("data", exist_ok=True)
     start_time = datetime(2026, 1, 1, 0, 0, 0)
     
     failure_modes = ["NONE", "THERMAL", "MEMORY", "INTERFACE", "CONGESTION", "HARDWARE"]
     failure_mode_probs = [0.65, 0.07, 0.07, 0.07, 0.07, 0.07]
     
     device_configs = []
+    used_ips = set()
     for i in range(1, num_devices + 1):
         dev_id = f"DEV-{i:05d}"
         dev_type = np.random.choice(["Router", "Switch"], p=[0.5, 0.5])
@@ -54,7 +54,11 @@ def generate_network_telemetry(num_devices=500, steps_per_device=100):
         
         vendor, model = VENDORS[dev_type][np.random.choice(len(VENDORS[dev_type]))]
         location, rack = LOCATIONS[np.random.choice(len(LOCATIONS))]
+        # Re-draw on collision: discovered_nodes keys on ip_address, so duplicates overwrite each other
         ip_addr = f"10.10.{np.random.randint(1, 254)}.{np.random.randint(1, 254)}"
+        while ip_addr in used_ips:
+            ip_addr = f"10.10.{np.random.randint(1, 254)}.{np.random.randint(1, 254)}"
+        used_ips.add(ip_addr)
         hostname = f"{dev_type[:3].upper()}-{location[:3].upper()}-{i:03d}"
         firmware = np.random.choice(FIRMWARE_VERSIONS)
         base_uptime = np.random.uniform(10, 800)

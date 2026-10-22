@@ -406,6 +406,51 @@ def get_active_alerts(limit: int = 50) -> List[Dict[str, Any]]:
         return []
 
 
+def record_incident(device_id: str, failure_type: str, failure_probability: float, severity: str,
+                    recommended_actions: list = None, telemetry_snapshot: dict = None) -> bool:
+    """Records an incident through the deduplicated prediction/alert lifecycle."""
+    result = {
+        "failure_probability": failure_probability,
+        "risk": severity,
+        "predicted_failure": failure_type,
+        "recommended_actions": recommended_actions or []
+    }
+    log_prediction(device_id, telemetry_snapshot or {}, result)
+    return True
+
+
+def get_incidents(status: str = None) -> List[Dict[str, Any]]:
+    """Returns incident alerts, optionally filtered by status (ACTIVE | ACKNOWLEDGED | RESOLVED)."""
+    try:
+        with _connect() as conn:
+            if status:
+                rows = conn.execute(
+                    "SELECT * FROM alerts WHERE status = ? ORDER BY timestamp DESC", (status.upper(),)
+                ).fetchall()
+            else:
+                rows = conn.execute("SELECT * FROM alerts ORDER BY timestamp DESC").fetchall()
+        return [dict(r) for r in rows]
+    except Exception as exc:
+        logger.warning("Incidents fetch failed: %s", exc)
+        return []
+
+
+def update_incident_status(incident_id: int, status: str, notes: str = None) -> bool:
+    """Transitions an incident to the given status. The alerts table has no notes column, so notes are not stored."""
+    status = str(status).upper()
+    if status not in ("ACTIVE", "ACKNOWLEDGED", "RESOLVED"):
+        return False
+    try:
+        now_str = datetime.now(timezone.utc).isoformat()
+        with _connect() as conn:
+            cursor = conn.execute("UPDATE alerts SET status = ?, updated_at = ? WHERE id = ?", (status, now_str, incident_id))
+            conn.commit()
+            return cursor.rowcount > 0
+    except Exception as exc:
+        logger.warning("Update incident status failed: %s", exc)
+        return False
+
+
 def get_discovered_nodes() -> List[Dict[str, Any]]:
     try:
         with _connect() as conn:

@@ -7,6 +7,16 @@ let cachedPredictions = [];
 let cachedDevices = [];
 let cachedTopology = null;
 
+// Escapes server-provided values before they are interpolated into innerHTML templates
+function esc(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Encodes a value as a JS string literal that is safe inside a double-quoted onclick attribute
+function jsArg(v) {
+  return esc(JSON.stringify(String(v ?? '')));
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initClock();
   setupCommandPaletteShortcuts();
@@ -152,16 +162,16 @@ function renderTopFailuresTable(items) {
   if (!tbody) return;
 
   tbody.innerHTML = items.map(p => `
-    <tr onclick="openDeviceDrawer('${p.device_id}')">
-      <td class="device-id mono-text" style="color:var(--accent-cyan); font-weight:600;">${p.device_id}</td>
-      <td>${p.hostname}</td>
-      <td class="ip-address mono-text" style="color:var(--text-muted);">${p.ip_address}</td>
-      <td><span class="badge-risk ${p.risk}">${p.risk}</span></td>
+    <tr onclick="openDeviceDrawer(${jsArg(p.device_id)})">
+      <td class="device-id mono-text" style="color:var(--accent-cyan); font-weight:600;">${esc(p.device_id)}</td>
+      <td>${esc(p.hostname)}</td>
+      <td class="ip-address mono-text" style="color:var(--text-muted);">${esc(p.ip_address)}</td>
+      <td><span class="badge-risk ${esc(p.risk)}">${esc(p.risk)}</span></td>
       <td class="mono-text" style="font-weight:600;">${p.failure_probability_pct !== null && p.failure_probability_pct !== undefined ? p.failure_probability_pct + '%' : '<span style="color:var(--text-muted); font-size:11px;">N/A (ML Unavailable)</span>'}</td>
-      <td><span style="font-weight:600; color:var(--text-main);">${p.predicted_failure}</span></td>
+      <td><span style="font-weight:600; color:var(--text-main);">${esc(p.predicted_failure)}</span></td>
 
-      <td class="mono-text">${p.health_score}</td>
-      <td><button class="btn-noc" onclick="event.stopPropagation(); openDeviceDrawer('${p.device_id}')">Inspect →</button></td>
+      <td class="mono-text">${esc(p.health_score)}</td>
+      <td><button class="btn-noc" onclick="event.stopPropagation(); openDeviceDrawer(${jsArg(p.device_id)})">Inspect →</button></td>
     </tr>
   `).join('');
 }
@@ -297,7 +307,7 @@ function renderTopologySVG(nodes, links) {
   Object.values(nodeMap).forEach(node => {
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('class', 'topo-node');
-    g.setAttribute('onclick', `openDeviceDrawer('${node.id}')`);
+    g.addEventListener('click', () => openDeviceDrawer(node.id));
 
     const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     circle.setAttribute('cx', node.x);
@@ -337,16 +347,16 @@ function renderDevicesTable(devices) {
   if (!tbody) return;
 
   tbody.innerHTML = devices.map(d => `
-    <tr onclick="openDeviceDrawer('${d.device_id}')">
-      <td class="device-id mono-text" style="color:var(--accent-cyan); font-weight:600;">${d.device_id}</td>
-      <td>${d.hostname}</td>
-      <td class="ip-address mono-text">${d.ip_address}</td>
-      <td>${d.device_type}</td>
-      <td>${d.vendor}</td>
-      <td>${d.location}</td>
-      <td><span class="badge-risk ${d.risk}">${d.risk}</span></td>
+    <tr onclick="openDeviceDrawer(${jsArg(d.device_id)})">
+      <td class="device-id mono-text" style="color:var(--accent-cyan); font-weight:600;">${esc(d.device_id)}</td>
+      <td>${esc(d.hostname)}</td>
+      <td class="ip-address mono-text">${esc(d.ip_address)}</td>
+      <td>${esc(d.device_type)}</td>
+      <td>${esc(d.vendor)}</td>
+      <td>${esc(d.location)}</td>
+      <td><span class="badge-risk ${esc(d.risk)}">${esc(d.risk)}</span></td>
       <td class="mono-text">${d.failure_probability !== null && d.failure_probability !== undefined ? (d.failure_probability * 100).toFixed(1) + '%' : '<span style="color:var(--text-muted); font-size:11px;">N/A (ML Unavailable)</span>'}</td>
-      <td class="mono-text">${d.health_score}</td>
+      <td class="mono-text">${esc(d.health_score)}</td>
 
     </tr>
   `).join('');
@@ -387,16 +397,16 @@ function renderIncidentsTable(alerts) {
     <tr>
       <td class="mono-text" style="color:var(--accent-cyan)">INC-${a.id.toString().padStart(5, '0')}</td>
       <td class="timestamp mono-text" style="font-size:11px;">${a.timestamp.substring(0, 19).replace('T', ' ')}</td>
-      <td class="device-id mono-text" onclick="openDeviceDrawer('${a.device_id}')" style="cursor:pointer; text-decoration:underline;">${a.device_id}</td>
-      <td><span class="badge-risk ${a.severity}">${a.severity}</span></td>
+      <td class="device-id mono-text" onclick="openDeviceDrawer(${jsArg(a.device_id)})" style="cursor:pointer; text-decoration:underline;">${esc(a.device_id)}</td>
+      <td><span class="badge-risk ${esc(a.severity)}">${esc(a.severity)}</span></td>
       <td>
-        <div style="font-weight:600; color:var(--text-main);">${a.title}</div>
-        <div style="font-size:11px; color:var(--text-muted);">${a.message}</div>
+        <div style="font-weight:600; color:var(--text-main);">${esc(a.title)}</div>
+        <div style="font-size:11px; color:var(--text-muted);">${esc(a.message)}</div>
       </td>
-      <td><span class="mono-text" style="font-size:11px; font-weight:700; color:${a.status === 'ACTIVE' ? 'var(--color-critical)' : 'var(--color-medium)'}">${a.status}</span></td>
+      <td><span class="mono-text" style="font-size:11px; font-weight:700; color:${a.status === 'ACTIVE' ? 'var(--color-critical)' : 'var(--color-medium)'}">${esc(a.status)}</span></td>
       <td>
-        ${a.status === 'ACTIVE' ? `<button class="btn-noc" onclick="acknowledgeAlert(${a.id})">Acknowledge</button>` : ''}
-        ${a.status !== 'RESOLVED' ? `<button class="btn-noc primary" onclick="resolveAlert(${a.id})">Resolve</button>` : ''}
+        ${a.status === 'ACTIVE' ? `<button class="btn-noc" onclick="acknowledgeAlert(${esc(a.id)})">Acknowledge</button>` : ''}
+        ${a.status !== 'RESOLVED' ? `<button class="btn-noc primary" onclick="resolveAlert(${esc(a.id)})">Resolve</button>` : ''}
       </td>
     </tr>
   `).join('');
@@ -427,13 +437,13 @@ function loadPredictionsData() {
   const tbody = document.getElementById('predictions-tbody');
   if (!tbody) return;
   tbody.innerHTML = cachedPredictions.map(p => `
-    <tr onclick="openDeviceDrawer('${p.device_id}')">
-      <td class="device-id mono-text" style="color:var(--accent-cyan);">${p.device_id}</td>
-      <td>${p.hostname}</td>
-      <td><span class="badge-risk ${p.risk}">${p.risk}</span></td>
+    <tr onclick="openDeviceDrawer(${jsArg(p.device_id)})">
+      <td class="device-id mono-text" style="color:var(--accent-cyan);">${esc(p.device_id)}</td>
+      <td>${esc(p.hostname)}</td>
+      <td><span class="badge-risk ${esc(p.risk)}">${esc(p.risk)}</span></td>
       <td class="mono-text" style="font-weight:600;">${p.failure_probability_pct !== null && p.failure_probability_pct !== undefined ? p.failure_probability_pct + '%' : '<span style="color:var(--text-muted); font-size:11px;">N/A (ML Unavailable)</span>'}</td>
-      <td>${p.predicted_failure}</td>
-      <td class="mono-text">${p.diagnostic_confidence}%</td>
+      <td>${esc(p.predicted_failure)}</td>
+      <td class="mono-text">${esc(p.diagnostic_confidence)}%</td>
     </tr>
   `).join('');
 }
@@ -447,12 +457,12 @@ function loadAnomaliesData() {
 
   const anomalous = cachedPredictions.filter(p => p.anomaly_score > 40.0 || p.risk !== 'LOW');
   tbody.innerHTML = anomalous.map(p => `
-    <tr onclick="openDeviceDrawer('${p.device_id}')">
-      <td class="device-id mono-text" style="color:var(--accent-cyan);">${p.device_id}</td>
-      <td>${p.hostname}</td>
-      <td class="mono-text" style="font-weight:600; color:var(--accent-cyan);">${p.anomaly_score}%</td>
+    <tr onclick="openDeviceDrawer(${jsArg(p.device_id)})">
+      <td class="device-id mono-text" style="color:var(--accent-cyan);">${esc(p.device_id)}</td>
+      <td>${esc(p.hostname)}</td>
+      <td class="mono-text" style="font-weight:600; color:var(--accent-cyan);">${esc(p.anomaly_score)}%</td>
       <td class="mono-text">${p.failure_probability_pct !== null && p.failure_probability_pct !== undefined ? p.failure_probability_pct + '%' : '<span style="color:var(--text-muted); font-size:11px;">N/A</span>'}</td>
-      <td><span class="badge-risk ${p.risk}">${p.risk}</span></td>
+      <td><span class="badge-risk ${esc(p.risk)}">${esc(p.risk)}</span></td>
     </tr>
   `).join('');
 }
@@ -466,17 +476,17 @@ function loadAnomaliesData() {
 function _renderBarRows(container, entries, colorFn) {
   if (!container) return;
   const total = entries.reduce((s, [, v]) => s + (v.count || v), 0) || 1;
-  container.innerHTML = entries.map(([label, v]) => {
+  container.innerHTML = entries.map(([label, v], idx) => {
     const count = v.count !== undefined ? v.count : v;
     const pct   = v.pct   !== undefined ? v.pct   : +((count / total) * 100).toFixed(1);
     const health = v.avg_health !== undefined
-      ? `<span class="mono-text" style="font-size:11px; color:var(--text-muted); margin-left:8px;">⬆ ${v.avg_health}</span>`
+      ? `<span class="mono-text" style="font-size:11px; color:var(--text-muted); margin-left:8px;">⬆ ${esc(v.avg_health)}</span>`
       : '';
-    const color = colorFn ? colorFn(label) : 'var(--accent-cyan)';
+    const color = colorFn ? colorFn(label, idx) : 'var(--accent-cyan)';
     return `
       <div style="margin-bottom:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <span style="font-size:12px; font-weight:600; color:var(--text-main);">${label}${health}</span>
+          <span style="font-size:12px; font-weight:600; color:var(--text-main);">${esc(label)}${health}</span>
           <span class="mono-text" style="font-size:12px; color:${color}; font-weight:700;">${count} <span style="font-size:10px; color:var(--text-muted);">(${pct}%)</span></span>
         </div>
         <div style="background:var(--border-color); border-radius:4px; height:6px; overflow:hidden;">
@@ -593,7 +603,7 @@ async function runDiscoveryScan() {
       <tr>
         <td colspan="8" style="text-align:center; padding:30px;">
           <span class="spinner" style="width:20px; height:20px; margin-bottom:8px;"></span>
-          <div style="font-weight:600; color:var(--accent-cyan); font-size:13px;">Probing CIDR Subnet ${cidr} (Mode: ${mode})...</div>
+          <div style="font-weight:600; color:var(--accent-cyan); font-size:13px;">Probing CIDR Subnet ${esc(cidr)} (Mode: ${esc(mode)})...</div>
           <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Scanning reachability and querying SNMP/REST API object identifiers...</div>
         </td>
       </tr>
@@ -632,14 +642,14 @@ function renderDiscoveryTable(nodes) {
 
   tbody.innerHTML = nodes.map(n => `
     <tr>
-      <td class="device-id mono-text" style="color:var(--accent-cyan);">${n.device_id}</td>
-      <td>${n.hostname}</td>
-      <td class="ip-address mono-text">${n.ip_address}</td>
-      <td>${n.device_type}</td>
-      <td>${n.vendor}</td>
-      <td>${n.model}</td>
-      <td class="mono-text" style="font-size:11px;">${n.discovery_protocol}</td>
-      <td><span class="mono-text" style="color:var(--color-low); font-weight:700;">${n.status}</span></td>
+      <td class="device-id mono-text" style="color:var(--accent-cyan);">${esc(n.device_id)}</td>
+      <td>${esc(n.hostname)}</td>
+      <td class="ip-address mono-text">${esc(n.ip_address)}</td>
+      <td>${esc(n.device_type)}</td>
+      <td>${esc(n.vendor)}</td>
+      <td>${esc(n.model)}</td>
+      <td class="mono-text" style="font-size:11px;">${esc(n.discovery_protocol)}</td>
+      <td><span class="mono-text" style="color:var(--color-low); font-weight:700;">${esc(n.status)}</span></td>
     </tr>
   `).join('');
 }
@@ -657,7 +667,7 @@ async function openDeviceDrawer(deviceId) {
   body.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-muted)">Loading device deep-dive telemetry...</div>';
 
   try {
-    const res = await fetch(`/api/devices/${deviceId}`);
+    const res = await fetch(`/api/devices/${encodeURIComponent(deviceId)}`);
     const data = await res.json();
     if (data.success) {
       const dev = data.device;
@@ -665,7 +675,7 @@ async function openDeviceDrawer(deviceId) {
 
       body.innerHTML = `
         <div style="margin-bottom:20px;">
-          <span class="badge-risk ${dev.risk}" style="font-size:13px; padding:4px 12px;">${dev.risk} RISK</span>
+          <span class="badge-risk ${esc(dev.risk)}" style="font-size:13px; padding:4px 12px;">${esc(dev.risk)} RISK</span>
           <div style="font-size:28px; font-weight:700; color:#fff; margin-top:8px;" class="mono-text">${dev.failure_probability_pct !== null && dev.failure_probability_pct !== undefined ? dev.failure_probability_pct + '%' : '<span style="font-size:18px; color:var(--text-muted);">N/A (ML Model Unavailable)</span>'}</div>
           <div style="font-size:11px; color:var(--text-muted)">Failure Probability Next 12 Hours</div>
         </div>
@@ -674,25 +684,25 @@ async function openDeviceDrawer(deviceId) {
         <div class="noc-card" style="margin-bottom:16px;">
           <div class="card-title">Device Telemetry Baseline</div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:12px;">
-            <div>CPU Usage: <strong class="mono-text">${t.cpu}%</strong></div>
-            <div>Memory Usage: <strong class="mono-text">${t.memory}%</strong></div>
-            <div>Temperature: <strong class="mono-text">${t.temperature}°C</strong></div>
-            <div>Interface Errors: <strong class="mono-text">${t.errors}</strong></div>
-            <div>Packet Loss: <strong class="mono-text">${t.packet_loss}%</strong></div>
-            <div>Bandwidth: <strong class="mono-text">${t.bandwidth}%</strong></div>
+            <div>CPU Usage: <strong class="mono-text">${esc(t.cpu)}%</strong></div>
+            <div>Memory Usage: <strong class="mono-text">${esc(t.memory)}%</strong></div>
+            <div>Temperature: <strong class="mono-text">${esc(t.temperature)}°C</strong></div>
+            <div>Interface Errors: <strong class="mono-text">${esc(t.errors)}</strong></div>
+            <div>Packet Loss: <strong class="mono-text">${esc(t.packet_loss)}%</strong></div>
+            <div>Bandwidth: <strong class="mono-text">${esc(t.bandwidth)}%</strong></div>
           </div>
         </div>
 
         <div class="noc-card" style="margin-bottom:16px;">
           <div class="card-title">Diagnostic Analysis</div>
-          <div style="font-size:14px; font-weight:700; color:var(--accent-cyan); margin-bottom:6px;">MODE: ${dev.predicted_failure}</div>
-          <div style="font-size:11px; color:var(--text-muted)">Diagnostic Confidence: ${dev.diagnostic_confidence}%</div>
+          <div style="font-size:14px; font-weight:700; color:var(--accent-cyan); margin-bottom:6px;">MODE: ${esc(dev.predicted_failure)}</div>
+          <div style="font-size:11px; color:var(--text-muted)">Diagnostic Confidence: ${esc(dev.diagnostic_confidence)}%</div>
         </div>
 
         <div class="noc-card">
           <div class="card-title">NOC Recommended Actions</div>
           <ul style="padding-left:16px; font-size:12px; color:var(--text-muted); display:flex; flex-direction:column; gap:6px;">
-            ${(dev.recommended_actions || []).map(a => `<li>${a}</li>`).join('')}
+            ${(dev.recommended_actions || []).map(a => `<li>${esc(a)}</li>`).join('')}
           </ul>
         </div>
       `;
@@ -747,8 +757,8 @@ function handleCmdSearch() {
 
   if (q.startsWith('dev-')) {
     container.innerHTML = `
-      <div class="cmd-item" onclick="openDeviceDrawer('${q.toUpperCase()}'); closeCommandPalette();">
-        <span>Inspect Device ${q.toUpperCase()}</span>
+      <div class="cmd-item" onclick="openDeviceDrawer(${jsArg(q.toUpperCase())}); closeCommandPalette();">
+        <span>Inspect Device ${esc(q.toUpperCase())}</span>
         <span class="kbd-badge">Inspect</span>
       </div>
     `;
@@ -948,7 +958,7 @@ function renderShapBars(causes) {
       <div class="shap-row">
         <div class="shap-label">
           <span class="shap-dir" style="color:${barColor}; font-weight:700;">${dirIcon}</span>
-          <span>${c.feature}</span>
+          <span>${esc(c.feature)}</span>
         </div>
         <div class="shap-bar-track">
           <div class="shap-bar-fill" style="width:${pct}%; background:${barColor};"></div>
@@ -966,7 +976,7 @@ function renderRecommendedRunbook(actions) {
     list.innerHTML = '<li>Device operating within nominal limits. Standard monitoring advised.</li>';
     return;
   }
-  list.innerHTML = actions.map(act => `<li>${act}</li>`).join('');
+  list.innerHTML = actions.map(act => `<li>${esc(act)}</li>`).join('');
 }
 
 function renderWhatIfPanel(whatifData) {

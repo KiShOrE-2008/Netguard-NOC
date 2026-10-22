@@ -145,7 +145,8 @@ class FleetPredictor:
                 prob_pct = None
                 prob_val = None
                 prediction_available = False
-                risk_level = "LOW" if heuristic_risk < 30 else ("MEDIUM" if heuristic_risk < 60 else "HIGH")
+                # Same 4-tier scale as single-device inference (web_app._run_inference)
+                risk_level = get_risk_level(heuristic_risk / 100.0)
 
             health_score = compute_health_score(telemetry_dict, probability=prob if prob is not None else 0.0, anomaly_score=anomaly_score)
             diag_info = diag_infos[idx] if idx < len(diag_infos) else {
@@ -325,7 +326,8 @@ def main():
     print("\nTOP PREDICTED RISKS")
     print("-" * 65)
     for idx, p in enumerate(predictions[:10], 1):
-        print(f"{idx:<2}. {p['device_id']:<10} {p['failure_probability_pct']:>5.1f}%   {p['risk']:<9}  {p['predicted_failure']:<12} Health: {p['health_score']}")
+        prob_str = f"{p['failure_probability_pct']:>5.1f}%" if p['failure_probability_pct'] is not None else "  N/A "
+        print(f"{idx:<2}. {p['device_id']:<10} {prob_str}   {p['risk']:<9}  {p['predicted_failure']:<12} Health: {p['health_score']}")
 
     print("\nFAILURE MODE DISTRIBUTION")
     print("-" * 40)

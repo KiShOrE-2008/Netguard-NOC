@@ -59,7 +59,7 @@ def get_topology():
                 "model": str(pred.get("model", "ISR-4331")),
                 "location": str(pred.get("location", "DC-1")),
                 "risk": str(pred.get("risk", "LOW")),
-                "failure_probability": float(pred.get("failure_probability", 0.0)),
+                "failure_probability": float(pred.get("failure_probability") or 0.0),
                 "health_score": float(pred.get("health_score", 100.0)),
                 "status": "CRITICAL" if pred.get("risk") in ["HIGH", "CRITICAL"] else "HEALTHY"
             })

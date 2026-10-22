@@ -19,7 +19,10 @@ def scan_network():
     cidr = data.get("cidr", "10.1.0.0/24")
     mode = data.get("mode", "SIMULATION")
 
-    discovered = discovery_engine.scan_subnet(cidr=cidr, mode=mode)
+    try:
+        discovered = discovery_engine.scan_subnet(cidr=str(cidr), mode=str(mode))
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
     history_store.register_discovered_devices(discovered)
 
     return jsonify({

@@ -15,7 +15,7 @@ This architecture audit evaluates the current implementation of the `network-dev
 ## 2. Current Architecture Overview
 
 - **Directory Layout:**
-  - `frontend/`: SPA static files (`index.html`, `style.css`, `app.js`, `app_additions.js`, `logo.png`).
+  - `frontend/`: SPA static files (`index.html`, `style.css`, `app.js`, `logo.png`).
   - `backend/`:
     - `data/`: Dataset CSVs (`network_devices.csv`, `network_devices_timeseries.csv`, `topology.csv`, `failure_events.csv`) and SQLite DB (`network_noc.db`).
     - `models/`: Trained model binaries (`failure_model.pkl`, `diagnostic_model.pkl`, `anomaly_model.pkl`).

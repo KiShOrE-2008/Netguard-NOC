@@ -263,12 +263,14 @@ def api_v1_health():
 @app.route('/api/predict', methods=['POST'])
 def predict():
     try:
-        data = request.json
-        if not data:
+        data = request.get_json(silent=True)
+        if not data or not isinstance(data, dict):
             return jsonify({"error": "No input data provided"}), 400
         device_id = str(data.get("device_id", "manual")).strip() or "manual"
         result = _run_inference(data, log_to_history=True, device_id=device_id)
         return jsonify(result)
+    except (ValueError, TypeError) as e:
+        return jsonify({"error": f"Invalid telemetry value: {str(e)}"}), 400
     except Exception as e:
         return jsonify({"error": f"Failed to perform prediction: {str(e)}"}), 500
 
@@ -276,11 +278,13 @@ def predict():
 @app.route('/api/whatif', methods=['POST'])
 def whatif():
     try:
-        data = request.json
-        if not data:
+        data = request.get_json(silent=True)
+        if not data or not isinstance(data, dict):
             return jsonify({"error": "No input data provided"}), 400
         result = _run_inference(data, log_to_history=False)
         return jsonify(result)
+    except (ValueError, TypeError) as e:
+        return jsonify({"error": f"Invalid telemetry value: {str(e)}"}), 400
     except Exception as e:
         return jsonify({"error": f"What-if inference failed: {str(e)}"}), 500
 
@@ -289,10 +293,25 @@ def whatif():
 def get_device_history(device_id):
     try:
         limit = int(request.args.get("limit", 50))
+    except ValueError:
+        return jsonify({"error": "limit must be an integer"}), 400
+    try:
         records = history_store.get_history(device_id, limit=limit)
         return jsonify({"success": True, "device_id": device_id, "records": records})
     except Exception as e:
         return jsonify({"error": f"History fetch failed: {str(e)}"}), 500
+
+
+_timeline_cache = {"key": None, "df": None}
+
+
+def _load_timeseries(csv_path: str) -> pd.DataFrame:
+    """Reads the time-series CSV once and reuses it until the file changes on disk."""
+    key = (csv_path, os.path.getmtime(csv_path))
+    if _timeline_cache["key"] != key:
+        _timeline_cache["df"] = pd.read_csv(csv_path)
+        _timeline_cache["key"] = key
+    return _timeline_cache["df"]
 
 
 @app.route('/api/device/<device_id>/timeline', methods=['GET'])
@@ -303,8 +322,10 @@ def get_device_timeline(device_id):
     if not os.path.exists(csv_path):
         return jsonify({"error": "Time-series dataset CSV not found."}), 404
     try:
-        df = pd.read_csv(csv_path)
+        df = _load_timeseries(csv_path)
         dev_df = df[df["Device_ID"] == device_id].sort_values("Timestamp").tail(50)
+        # NaN (e.g. Failure_Next_12h on the final horizon rows) is not valid JSON for browsers
+        dev_df = dev_df.astype(object).where(pd.notnull(dev_df), None)
         records = dev_df.to_dict(orient="records")
         return jsonify({"success": True, "device_id": device_id, "timeline": records})
     except Exception as e:

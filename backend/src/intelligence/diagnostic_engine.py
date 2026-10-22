@@ -6,6 +6,10 @@ from feature_engineering import DIAGNOSTIC_FEATURE_COLUMNS, prepare_feature_matr
 
 FAILURE_MODES = ["NONE", "THERMAL", "MEMORY", "INTERFACE", "CONGESTION", "HARDWARE"]
 
+# Rule-based fallback diagnoses are not calibrated probabilities, so they report a
+# deliberately modest confidence instead of the 95% used for nominal (NONE) devices.
+HEURISTIC_CONFIDENCE = 0.60
+
 RECOMMENDED_ACTIONS = {
     "THERMAL": [
         "Inspect chassis cooling fans and airflow vents for dust or blockage",
@@ -100,8 +104,10 @@ class DiagnosticEngine:
 
                 except Exception as e:
                     predicted_mode = self._heuristic_diagnose(cpu, temp, mem, errors, packet_loss, bw)
+                    confidence = HEURISTIC_CONFIDENCE
             else:
                 predicted_mode = self._heuristic_diagnose(cpu, temp, mem, errors, packet_loss, bw)
+                confidence = HEURISTIC_CONFIDENCE
 
         actions = RECOMMENDED_ACTIONS.get(predicted_mode, RECOMMENDED_ACTIONS["NONE"])
 
@@ -155,9 +161,11 @@ class DiagnosticEngine:
             except Exception as e:
                 for global_i in np.where(needs_ml)[0]:
                     predicted_modes[global_i] = self._heuristic_diagnose(cpus[global_i], temps[global_i], mems[global_i], errors[global_i], losses[global_i], bws[global_i])
+                    confidences[global_i] = HEURISTIC_CONFIDENCE * 100
         else:
             for global_i in np.where(needs_ml)[0]:
                 predicted_modes[global_i] = self._heuristic_diagnose(cpus[global_i], temps[global_i], mems[global_i], errors[global_i], losses[global_i], bws[global_i])
+                confidences[global_i] = HEURISTIC_CONFIDENCE * 100
 
         results = []
         for i in range(n):
@@ -178,8 +186,8 @@ class DiagnosticEngine:
             return "INTERFACE"
         elif bw > 85 and (cpu > 75 or packet_loss > 2.0):
             return "CONGESTION"
-        elif cpu > 90:
-            return "HARDWARE"
+        # Elevated risk with no matching telemetry signature (including cpu > 90) is
+        # attributed to an unobserved hardware subsystem fault.
         return "HARDWARE"
 
 

@@ -24,6 +24,7 @@ WORKSPACE_ROOT = os.path.dirname(BACKEND_ROOT)
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
+from sklearn.base import clone
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
@@ -170,8 +171,10 @@ def train_all_models(data_path: str = None, output_dir: str = None):
     bin_val_results = {}
 
     for name, clf in candidate_models.items():
+        # Pipeline.fit mutates its steps in place, so each pipeline needs its own
+        # preprocessor copy; sharing one lets later fits overwrite saved models' scalers.
         pipeline = Pipeline([
-            ("preprocessor", preprocessor),
+            ("preprocessor", clone(preprocessor)),
             ("model", clf)
         ])
         
@@ -249,7 +252,7 @@ def train_all_models(data_path: str = None, output_dir: str = None):
             n_estimators=150, max_depth=5, learning_rate=0.05, random_state=42, eval_metric="mlogloss"
         )
         diagnostic_pipeline = Pipeline([
-            ("preprocessor", preprocessor),
+            ("preprocessor", clone(preprocessor)),
             ("model", diagnostic_clf)
         ])
 
@@ -283,7 +286,8 @@ def train_all_models(data_path: str = None, output_dir: str = None):
     os.makedirs(outputs_dir, exist_ok=True)
 
     anomaly_model_path = os.path.join(models_dir, "anomaly_model.pkl")
-    anomaly_model = anomaly_detection.train_anomaly_model(df, model_path=anomaly_model_path)
+    # Baseline is learned from the training partition only, so validation/test periods stay unseen
+    anomaly_model = anomaly_detection.train_anomaly_model(train_df, model_path=anomaly_model_path)
 
     # ---------------------------------------------------------------------------
     # Save Model Artifacts & Auto-Generate Metadata (models/model_metadata.json)

@@ -83,7 +83,6 @@ network-device-failure-prediction/
 │   ├── index.html              # Web dashboard interface HTML5 markup
 │   ├── style.css               # Modern styling system & dashboard theme
 │   ├── app.js                  # Real-time AJAX client & dynamic visual chart renderer
-│   ├── app_additions.js        # Extended dashboard interactive modules
 │   └── logo.png                # NetGuard NOC brand icon
 │
 └── backend/                    # Backend API, AI models, data & test suite
